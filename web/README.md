@@ -21,8 +21,12 @@ python -m http.server 8652 --directory studylog
 
 ## 公開（GitHub Pages）
 
-`.github/workflows/deploy-web.yml` が `web/` を Pages に配る。`dev/` は公開物から除外する。
-リポジトリ作成とPagesの有効化はまだ行っていない。
+公開URL: **https://aoisoranokanata-ops.github.io/studylog/**
+
+`.github/workflows/deploy-web.yml` が `web/` の中身だけを Pages に配る（Settings → Pages の Source は
+「GitHub Actions」）。`dev/` は公開物から除外する。`main` の `web/` を変更して push すると自動で公開される。
+
+アプリを更新したら `sw.js` の `VERSION` と `js/version.js` を上げること。上げないと端末に古い版が残る。
 
 ## 構成
 
