@@ -9,6 +9,14 @@ import * as timer from '../js/timer.js';
 import * as transfer from '../js/transfer.js';
 import { NeedsUpdateError, validateDown, validateUp } from '../js/validate.js';
 
+// 安全装置：テストは子機と同じIndexedDBを消すので、手元の開発サーバでしか動かさない。
+// 万一公開先に置かれても、スマホの本番データを消さないようにする。
+if (!['localhost', '127.0.0.1'].includes(location.hostname)) {
+  document.getElementById('summary').textContent =
+    'このテストは開発用のPCでだけ動きます（アプリのデータを消すため、公開先では実行しません）。';
+  throw new Error('テストは localhost 以外では実行しない');
+}
+
 const EXAMPLES = '../../spec/examples/';
 const results = [];
 let currentGroup = '';
