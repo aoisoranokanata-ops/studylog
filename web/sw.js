@@ -1,8 +1,9 @@
 // Service Worker。初回の読み込み後は完全にオフラインで動く。
 // キャッシュ名のバージョンを上げると、新しい版として配られる。
 
-const VERSION = 'v0.1.0';
-const CACHE = `studylog-${VERSION}`;
+const VERSION = 'v0.1.1';
+const PREFIX = 'studylog-';
+const CACHE = `${PREFIX}${VERSION}`;
 
 const ASSETS = [
   './',
@@ -37,8 +38,13 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
+      // 同じオリジン（github.io）には他のアプリも同居しているので、自分のキャッシュだけを消す
       const names = await caches.keys();
-      await Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name)));
+      await Promise.all(
+        names
+          .filter((name) => name.startsWith(PREFIX) && name !== CACHE)
+          .map((name) => caches.delete(name)),
+      );
       await self.clients.claim();
     })(),
   );
@@ -55,19 +61,19 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
-      const cached = await caches.match(request, { ignoreSearch: true });
+      const cache = await caches.open(CACHE); // 他アプリのキャッシュは見ない
+      const cached = await cache.match(request, { ignoreSearch: true });
       if (cached) return cached;
       try {
         const response = await fetch(request);
         if (response.ok && response.type === 'basic') {
-          const cache = await caches.open(CACHE);
           cache.put(request, response.clone());
         }
         return response;
       } catch (error) {
         // オフラインで未キャッシュのページを開いたときは、アプリ本体を返す
         if (request.mode === 'navigate') {
-          const fallback = await caches.match('index.html');
+          const fallback = await cache.match('index.html');
           if (fallback) return fallback;
         }
         throw error;

@@ -120,19 +120,21 @@ async function showOnboardingIfNeeded() {
 
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
+  // 初回インストールでは「更新」ではないので、バナーも再読み込みも要らない
+  const hadController = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker
     .register('sw.js')
     .then((registration) => {
       const notify = (worker) => {
         if (!worker) return;
         worker.addEventListener('statechange', () => {
-          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          if (worker.state === 'installed' && hadController) {
             showUpdateBanner(worker);
           }
         });
       };
       // すでに新しい版が待機している場合もある（前回の訪問で入れ替わった直後など）
-      if (registration.waiting && navigator.serviceWorker.controller) {
+      if (registration.waiting && hadController) {
         showUpdateBanner(registration.waiting);
       }
       notify(registration.installing);
@@ -142,7 +144,7 @@ function registerServiceWorker() {
 
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
+    if (reloading || !hadController) return;
     reloading = true;
     window.location.reload();
   });
