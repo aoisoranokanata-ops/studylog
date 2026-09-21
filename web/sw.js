@@ -1,7 +1,7 @@
 // Service Worker。初回の読み込み後は完全にオフラインで動く。
 // キャッシュ名のバージョンを上げると、新しい版として配られる。
 
-const VERSION = 'v0.1.1';
+const VERSION = 'v0.1.2';
 const PREFIX = 'studylog-';
 const CACHE = `${PREFIX}${VERSION}`;
 
@@ -32,7 +32,10 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+  // ブラウザのHTTPキャッシュ（GitHub Pagesは10分有効）を通さず、必ずサーバーから取り直す。
+  // そうしないと、新しい版のキャッシュに古いファイルが紛れ込む。
+  const requests = ASSETS.map((url) => new Request(url, { cache: 'reload' }));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(requests)));
 });
 
 self.addEventListener('activate', (event) => {
