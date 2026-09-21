@@ -1,0 +1,23 @@
+{
+  "$comment": "異常例：必須項目の欠落。(1) variant が full なのに masters が無い (2) quotas[0] に targetSeconds と labels が無い (3) settings に weekStartsOn が無い。パッケージ全体を拒否すること（仕様書 第1章-5）。",
+  "format": "studylog-transfer",
+  "kind": "down",
+  "schemaVersion": 1,
+  "packageId": "d000000a-0000-4000-8000-00000000000a",
+  "createdAt": "2026-09-20T07:10:00+09:00",
+  "hubId": "11111111-0000-4000-8000-000000000001",
+  "targetDate": "2026-09-20",
+  "variant": "full",
+  "settings": { "dayChangeHour": 4 },
+  "quotas": [
+    {
+      "id": "9c00000a-0000-4000-8000-00000000000a",
+      "date": "2026-09-20",
+      "order": 1,
+      "examId": "e0000001-0000-4000-8000-000000000001",
+      "materialId": null,
+      "subjectId": null,
+      "title": "民法 問題集"
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://studylog.local/schemas/up.schema.json",
+  "title": "StudyLog 上りパッケージ（子機→母艦）",
+  "description": "transfer-spec.md v1.1 第4章。外部から取得されることはない($idは識別子であり、参照解決は不要)。前方互換のため additionalProperties は一切禁止しない。",
+  "type": "object",
+  "required": [
+    "format",
+    "kind",
+    "schemaVersion",
+    "packageId",
+    "createdAt",
+    "deviceId",
+    "deviceName",
+    "basedOnPackageId",
+    "records",
+    "includedIds"
+  ],
+  "properties": {
+    "format": { "const": "studylog-transfer" },
+    "kind": { "const": "up" },
+    "schemaVersion": {
+      "const": 1,
+      "$comment": "アプリはスキーマ検証の前にschemaVersionを比較し、新しければ『アプリの更新が必要』と案内すること（仕様書 第2章）"
+    },
+    "packageId": { "$ref": "#/$defs/uuid" },
+    "createdAt": { "$ref": "#/$defs/dateTime" },
+    "deviceId": { "$ref": "#/$defs/uuid" },
+    "deviceName": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "basedOnPackageId": { "$ref": "#/$defs/uuidOrNull" },
+    "records": {
+      "type": "object",
+      "required": ["sessions", "mistakes", "reviewResults", "quotaStatus"],
+      "properties": {
+        "sessions": { "type": "array", "items": { "$ref": "#/$defs/session" } },
+        "mistakes": { "type": "array", "items": { "$ref": "#/$defs/mistake" } },
+        "reviewResults": { "type": "array", "items": { "$ref": "#/$defs/reviewResult" } },
+        "quotaStatus": { "type": "array", "items": { "$ref": "#/$defs/quotaStatus" } }
+      }
+    },
+    "includedIds": {
+      "$comment": "records内の全レコードidと過不足なく一致すること（仕様書 付録B-2。集合の一致はアプリ側で検証）",
+      "type": "array",
+      "items": { "$ref": "#/$defs/uuid" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "uuidOrNull": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "dateTime": {
+      "$comment": "タイムゾーン必須のISO 8601",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?([+-][0-9]{2}:[0-9]{2}|Z)$"
+    },
+    "range": {
+      "$comment": "from <= to はアプリ側で検証する（仕様書 付録B-1）",
+      "type": "object",
+      "required": ["unit", "from", "to"],
+      "properties": {
+        "unit": { "enum": ["page", "question"] },
+        "from": { "type": "integer", "minimum": 0 },
+        "to": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": [
+        "id",
+        "createdAt",
+        "updatedAt",
+        "unclassified",
+        "startedAt",
+        "endedAt",
+        "activeSeconds",
+        "entryMode",
+        "deleted"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "createdAt": { "$ref": "#/$defs/dateTime" },
+        "updatedAt": { "$ref": "#/$defs/dateTime" },
+        "quotaId": { "$ref": "#/$defs/uuidOrNull" },
+        "examId": { "$ref": "#/$defs/uuidOrNull" },
+        "materialId": { "$ref": "#/$defs/uuidOrNull" },
+        "subjectId": { "$ref": "#/$defs/uuidOrNull" },
+        "unclassified": { "type": "boolean" },
+        "startedAt": { "$ref": "#/$defs/dateTime" },
+        "endedAt": { "$ref": "#/$defs/dateTime" },
+        "activeSeconds": { "type": "integer", "minimum": 0 },
+        "range": {
+          "$comment": "省略可・null可（仕様書 第4章 B-4）",
+          "oneOf": [{ "$ref": "#/$defs/range" }, { "type": "null" }]
+        },
+        "correct": { "type": ["integer", "null"], "minimum": 0 },
+        "attempted": { "type": ["integer", "null"], "minimum": 0 },
+        "focus": {
+          "$comment": "集中度 1〜5（仕様書 第4章 B-3）",
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "memo": { "type": "string" },
+        "entryMode": { "enum": ["timer", "manual"] },
+        "deleted": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "$comment": "unclassified: false なら examId は必須かつ非null（仕様書 第4章 B-2）",
+          "if": {
+            "properties": { "unclassified": { "const": false } },
+            "required": ["unclassified"]
+          },
+          "then": {
+            "required": ["examId"],
+            "properties": { "examId": { "$ref": "#/$defs/uuid" } }
+          }
+        }
+      ]
+    },
+    "mistake": {
+      "$comment": "unclassifiedフラグは持たない。examIdがnullまたは未知のIDなら母艦側で未分類として扱う（仕様書 第4章）",
+      "type": "object",
+      "required": ["id", "createdAt", "updatedAt", "questionRef", "deleted"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "createdAt": { "$ref": "#/$defs/dateTime" },
+        "updatedAt": { "$ref": "#/$defs/dateTime" },
+        "sessionId": { "$ref": "#/$defs/uuidOrNull" },
+        "examId": { "$ref": "#/$defs/uuidOrNull" },
+        "materialId": { "$ref": "#/$defs/uuidOrNull" },
+        "subjectId": { "$ref": "#/$defs/uuidOrNull" },
+        "questionRef": { "type": "string", "minLength": 1 },
+        "memo": { "type": "string" },
+        "reason": {
+          "type": ["string", "null"],
+          "enum": ["knowledge", "misread", "careless", "confusion", "other", null]
+        },
+        "deleted": { "type": "boolean" }
+      }
+    },
+    "reviewResult": {
+      "$comment": "追記専用。子機では編集・削除しないため updatedAt を持たない（仕様書 第4章 A-2）",
+      "type": "object",
+      "required": ["id", "mistakeId", "result", "reviewedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "mistakeId": { "$ref": "#/$defs/uuid" },
+        "result": { "enum": ["ok", "ng"] },
+        "reviewedAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "quotaStatus": {
+      "$comment": "idは子機の取り込み済み判定用、quotaIdは母艦の採用判定用（仕様書 第4章 A-1）",
+      "type": "object",
+      "required": ["id", "quotaId", "status", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "quotaId": { "$ref": "#/$defs/uuid" },
+        "status": { "enum": ["done", "partial", "skipped"] },
+        "updatedAt": { "$ref": "#/$defs/dateTime" }
+      }
+    }
+  }
+}

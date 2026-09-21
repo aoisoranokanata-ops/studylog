@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://studylog.local/schemas/down.schema.json",
+  "title": "StudyLog 下りパッケージ（母艦→子機）",
+  "description": "transfer-spec.md v1.1 第3章。外部から取得されることはない($idは識別子であり、参照解決は不要)。前方互換のため additionalProperties は一切禁止しない。",
+  "type": "object",
+  "required": [
+    "format",
+    "kind",
+    "schemaVersion",
+    "packageId",
+    "createdAt",
+    "hubId",
+    "targetDate",
+    "variant",
+    "settings",
+    "quotas"
+  ],
+  "properties": {
+    "format": { "const": "studylog-transfer" },
+    "kind": { "const": "down" },
+    "schemaVersion": {
+      "const": 1,
+      "$comment": "アプリはスキーマ検証の前にschemaVersionを比較し、新しければ『アプリの更新が必要』と案内すること（仕様書 第2章）"
+    },
+    "packageId": { "$ref": "#/$defs/uuid" },
+    "createdAt": { "$ref": "#/$defs/dateTime" },
+    "hubId": { "$ref": "#/$defs/uuid" },
+    "targetDate": { "$ref": "#/$defs/date" },
+    "variant": { "enum": ["full", "lite"] },
+    "settings": { "$ref": "#/$defs/settings" },
+    "masters": { "$ref": "#/$defs/masters" },
+    "quotas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/quota" }
+    },
+    "reviews": {
+      "$comment": "キー自体が無い＝前回を維持、[] または null＝クリア（仕様書 第3章 B-1）",
+      "type": ["array", "null"],
+      "items": { "$ref": "#/$defs/review" }
+    },
+    "summary": {
+      "$comment": "キー自体が無い＝前回を維持、null＝クリア（仕様書 第3章 B-1）",
+      "oneOf": [{ "$ref": "#/$defs/summary" }, { "type": "null" }]
+    },
+    "acks": {
+      "$comment": "状態ではなく通知。省略・[]・null はいずれも『今回の新しい通知なし』（仕様書 第3章）",
+      "type": ["array", "null"],
+      "items": { "$ref": "#/$defs/uuid" },
+      "uniqueItems": true
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "variant: full のときは masters が必須（lite では省略する）",
+      "if": {
+        "properties": { "variant": { "const": "full" } },
+        "required": ["variant"]
+      },
+      "then": { "required": ["masters"] }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "uuidOrNull": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "dateOrNull": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "dateTime": {
+      "$comment": "タイムゾーン必須のISO 8601",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?([+-][0-9]{2}:[0-9]{2}|Z)$"
+    },
+    "seconds": { "type": "integer", "minimum": 0 },
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "settings": {
+      "type": "object",
+      "required": ["dayChangeHour", "weekStartsOn"],
+      "properties": {
+        "dayChangeHour": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "weekStartsOn": {
+          "$comment": "ISO-8601準拠 1=月曜 … 7=日曜",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        }
+      }
+    },
+    "masters": {
+      "type": "object",
+      "required": ["exams", "materials", "subjects"],
+      "properties": {
+        "exams": { "type": "array", "items": { "$ref": "#/$defs/exam" } },
+        "materials": { "type": "array", "items": { "$ref": "#/$defs/material" } },
+        "subjects": { "type": "array", "items": { "$ref": "#/$defs/subject" } }
+      }
+    },
+    "exam": {
+      "type": "object",
+      "required": ["id", "name", "color", "examDate", "archived"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/color" },
+        "examDate": { "$ref": "#/$defs/dateOrNull" },
+        "archived": { "type": "boolean" }
+      }
+    },
+    "material": {
+      "type": "object",
+      "required": ["id", "examId", "name", "type", "unitLabel", "total", "current", "archived"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "examId": { "$ref": "#/$defs/uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["text", "drill", "past", "lecture", "other"] },
+        "unitLabel": { "type": "string", "minLength": 1 },
+        "total": { "type": "integer", "minimum": 0 },
+        "current": { "type": "integer", "minimum": 0 },
+        "archived": { "type": "boolean" }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "required": ["id", "examId", "parentId", "name", "order", "archived"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "examId": { "$ref": "#/$defs/uuid" },
+        "parentId": { "$ref": "#/$defs/uuidOrNull" },
+        "name": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer" },
+        "archived": { "type": "boolean" }
+      }
+    },
+    "labels": {
+      "$comment": "参照用データ(masters)を持たない子機でも表示できるようにするための表示名",
+      "type": "object",
+      "required": ["exam"],
+      "properties": {
+        "exam": { "type": "string", "minLength": 1 },
+        "material": { "type": ["string", "null"] },
+        "subject": { "type": ["string", "null"] }
+      }
+    },
+    "range": {
+      "$comment": "from <= to はアプリ側で検証する（仕様書 付録B-1）",
+      "type": "object",
+      "required": ["unit", "from", "to"],
+      "properties": {
+        "unit": { "enum": ["page", "question"] },
+        "from": { "type": "integer", "minimum": 0 },
+        "to": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "quota": {
+      "type": "object",
+      "required": ["id", "date", "order", "examId", "labels", "title", "targetSeconds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "date": { "$ref": "#/$defs/date" },
+        "order": { "type": "integer" },
+        "examId": { "$ref": "#/$defs/uuid" },
+        "materialId": { "$ref": "#/$defs/uuidOrNull" },
+        "subjectId": { "$ref": "#/$defs/uuidOrNull" },
+        "labels": { "$ref": "#/$defs/labels" },
+        "title": { "type": "string", "minLength": 1 },
+        "targetSeconds": { "$ref": "#/$defs/seconds" },
+        "range": {
+          "oneOf": [{ "$ref": "#/$defs/range" }, { "type": "null" }]
+        },
+        "note": { "type": "string" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": ["mistakeId", "labels", "questionRef", "dueDate"],
+      "properties": {
+        "mistakeId": { "$ref": "#/$defs/uuid" },
+        "examId": { "$ref": "#/$defs/uuidOrNull" },
+        "materialId": { "$ref": "#/$defs/uuidOrNull" },
+        "subjectId": { "$ref": "#/$defs/uuidOrNull" },
+        "labels": { "$ref": "#/$defs/labels" },
+        "questionRef": { "type": "string", "minLength": 1 },
+        "memo": { "type": "string" },
+        "dueDate": { "$ref": "#/$defs/date" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["weekStart", "weekTotalSeconds", "weekGoalSeconds"],
+      "properties": {
+        "weekStart": { "$ref": "#/$defs/date" },
+        "weekTotalSeconds": { "$ref": "#/$defs/seconds" },
+        "weekGoalSeconds": { "$ref": "#/$defs/seconds" },
+        "countdowns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["examId", "name", "examDate", "daysLeft"],
+            "properties": {
+              "examId": { "$ref": "#/$defs/uuid" },
+              "name": { "type": "string", "minLength": 1 },
+              "examDate": { "$ref": "#/$defs/date" },
+              "daysLeft": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

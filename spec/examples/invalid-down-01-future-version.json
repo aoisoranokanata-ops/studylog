@@ -1,0 +1,13 @@
+{
+  "$comment": "異常例：受信側より新しい schemaVersion。スキーマ検証の前にバージョンを比較し、『アプリの更新が必要です』と案内して処理を中止すること（仕様書 第2章）。スキーマ上は schemaVersion: const 1 違反として弾かれるが、利用者向けの文言はバージョン比較で決める。",
+  "format": "studylog-transfer",
+  "kind": "down",
+  "schemaVersion": 2,
+  "packageId": "d0000009-0000-4000-8000-000000000009",
+  "createdAt": "2026-09-20T07:10:00+09:00",
+  "hubId": "11111111-0000-4000-8000-000000000001",
+  "targetDate": "2026-09-20",
+  "variant": "lite",
+  "settings": { "dayChangeHour": 4, "weekStartsOn": 1 },
+  "quotas": []
+}

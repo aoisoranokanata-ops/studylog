@@ -1,0 +1,152 @@
+{
+  "format": "studylog-transfer",
+  "kind": "down",
+  "schemaVersion": 1,
+  "packageId": "d0000001-0000-4000-8000-000000000001",
+  "createdAt": "2026-09-20T07:10:00+09:00",
+  "hubId": "11111111-0000-4000-8000-000000000001",
+  "targetDate": "2026-09-20",
+  "variant": "full",
+  "settings": { "dayChangeHour": 4, "weekStartsOn": 1 },
+  "masters": {
+    "exams": [
+      {
+        "id": "e0000001-0000-4000-8000-000000000001",
+        "name": "行政書士",
+        "color": "#2f6f4f",
+        "examDate": "2026-11-08",
+        "archived": false
+      },
+      {
+        "id": "e0000002-0000-4000-8000-000000000002",
+        "name": "FP2級",
+        "color": "#8a5a2b",
+        "examDate": null,
+        "archived": false
+      }
+    ],
+    "materials": [
+      {
+        "id": "3a000001-0000-4000-8000-000000000001",
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "name": "民法 問題集",
+        "type": "drill",
+        "unitLabel": "問",
+        "total": 480,
+        "current": 128,
+        "archived": false
+      },
+      {
+        "id": "3a000002-0000-4000-8000-000000000002",
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "name": "合格テキスト",
+        "type": "text",
+        "unitLabel": "ページ",
+        "total": 640,
+        "current": 210,
+        "archived": false
+      }
+    ],
+    "subjects": [
+      {
+        "id": "5b000001-0000-4000-8000-000000000001",
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "parentId": null,
+        "name": "民法",
+        "order": 1,
+        "archived": false
+      },
+      {
+        "id": "5b000002-0000-4000-8000-000000000002",
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "parentId": "5b000001-0000-4000-8000-000000000001",
+        "name": "総則",
+        "order": 1,
+        "archived": false
+      },
+      {
+        "id": "5b000003-0000-4000-8000-000000000003",
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "parentId": null,
+        "name": "行政法",
+        "order": 2,
+        "archived": false
+      }
+    ]
+  },
+  "quotas": [
+    {
+      "id": "9c000001-0000-4000-8000-000000000001",
+      "date": "2026-09-20",
+      "order": 1,
+      "examId": "e0000001-0000-4000-8000-000000000001",
+      "materialId": "3a000001-0000-4000-8000-000000000001",
+      "subjectId": "5b000002-0000-4000-8000-000000000002",
+      "labels": { "exam": "行政書士", "material": "民法 問題集", "subject": "民法 / 総則" },
+      "title": "民法総則 問題集 p.40-65",
+      "targetSeconds": 5400,
+      "range": { "unit": "question", "from": 40, "to": 65 },
+      "note": "時効の論点を重点的に"
+    },
+    {
+      "id": "9c000002-0000-4000-8000-000000000002",
+      "date": "2026-09-20",
+      "order": 2,
+      "examId": "e0000001-0000-4000-8000-000000000001",
+      "materialId": "3a000002-0000-4000-8000-000000000002",
+      "subjectId": "5b000003-0000-4000-8000-000000000003",
+      "labels": { "exam": "行政書士", "material": "合格テキスト", "subject": "行政法" },
+      "title": "行政法 テキスト p.210-240",
+      "targetSeconds": 3600,
+      "range": { "unit": "page", "from": 210, "to": 240 },
+      "note": ""
+    },
+    {
+      "id": "9c000003-0000-4000-8000-000000000003",
+      "date": "2026-09-20",
+      "order": 3,
+      "examId": "e0000002-0000-4000-8000-000000000002",
+      "materialId": null,
+      "subjectId": null,
+      "labels": { "exam": "FP2級", "material": null, "subject": null },
+      "title": "FP 過去問 1年分",
+      "targetSeconds": 1800
+    }
+  ],
+  "reviews": [
+    {
+      "mistakeId": "7d000001-0000-4000-8000-000000000001",
+      "examId": "e0000001-0000-4000-8000-000000000001",
+      "materialId": "3a000001-0000-4000-8000-000000000001",
+      "subjectId": "5b000002-0000-4000-8000-000000000002",
+      "labels": { "exam": "行政書士", "material": "民法 問題集", "subject": "民法 / 総則" },
+      "questionRef": "p.52 問3",
+      "memo": "制限行為能力者の取消権の期間",
+      "dueDate": "2026-09-20"
+    },
+    {
+      "mistakeId": "7d000002-0000-4000-8000-000000000002",
+      "examId": "e0000001-0000-4000-8000-000000000001",
+      "materialId": null,
+      "subjectId": "5b000003-0000-4000-8000-000000000003",
+      "labels": { "exam": "行政書士", "material": null, "subject": "行政法" },
+      "questionRef": "H30-問12",
+      "memo": "審査請求期間",
+      "dueDate": "2026-09-19"
+    }
+  ],
+  "summary": {
+    "weekStart": "2026-09-14",
+    "weekTotalSeconds": 43200,
+    "weekGoalSeconds": 72000,
+    "countdowns": [
+      {
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "name": "行政書士",
+        "examDate": "2026-11-08",
+        "daysLeft": 49
+      }
+    ]
+  },
+  "acks": []
+}

@@ -1,0 +1,37 @@
+{
+  "$comment": "異常例：書式違反。(1) createdAt にタイムゾーンが無い (2) exams[0].examDate が YYYY-MM-DD でない (3) exams[0].color が #RRGGBB でない (4) materials[0].type が定義外 (5) settings.dayChangeHour が範囲外。パッケージ全体を拒否すること。",
+  "format": "studylog-transfer",
+  "kind": "down",
+  "schemaVersion": 1,
+  "packageId": "d000000b-0000-4000-8000-00000000000b",
+  "createdAt": "2026-09-20T07:10:00",
+  "hubId": "11111111-0000-4000-8000-000000000001",
+  "targetDate": "2026-09-20",
+  "variant": "full",
+  "settings": { "dayChangeHour": 26, "weekStartsOn": 1 },
+  "masters": {
+    "exams": [
+      {
+        "id": "e0000001-0000-4000-8000-000000000001",
+        "name": "行政書士",
+        "color": "green",
+        "examDate": "2026/11/08",
+        "archived": false
+      }
+    ],
+    "materials": [
+      {
+        "id": "3a000001-0000-4000-8000-000000000001",
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "name": "民法 問題集",
+        "type": "workbook",
+        "unitLabel": "問",
+        "total": 480,
+        "current": 128,
+        "archived": false
+      }
+    ],
+    "subjects": []
+  },
+  "quotas": []
+}

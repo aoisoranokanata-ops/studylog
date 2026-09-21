@@ -1,0 +1,6 @@
+﻿__pycache__/
+*.pyc
+.pytest_cache/
+desktop/data/
+desktop/dist/
+desktop/build/

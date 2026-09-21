@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3c5a8a">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="StudyLog">
+<title>StudyLog 子機</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<div id="update-banner" class="banner banner-update" hidden>
+  <span>新しいバージョンがあります</span>
+  <button type="button" id="update-reload" class="btn btn-small">再読み込み</button>
+</div>
+
+<header class="appbar">
+  <h1 id="view-title">今日</h1>
+  <div id="appbar-extra" class="appbar-extra"></div>
+</header>
+
+<main id="view" class="view" aria-live="polite"></main>
+
+<nav class="tabbar" id="tabbar">
+  <button type="button" class="tab" data-view="home" aria-current="page">
+    <span class="tab-icon">■</span><span class="tab-label">今日</span>
+  </button>
+  <button type="button" class="tab" data-view="measure">
+    <span class="tab-icon">▶</span><span class="tab-label">計測</span>
+  </button>
+  <button type="button" class="tab" data-view="records">
+    <span class="tab-icon">≡</span><span class="tab-label">記録</span>
+  </button>
+  <button type="button" class="tab" data-view="transfer">
+    <span class="tab-icon">⇅</span><span class="tab-label">転送</span>
+  </button>
+  <button type="button" class="tab" data-view="settings">
+    <span class="tab-icon">⚙</span><span class="tab-label">設定</span>
+  </button>
+</nav>
+
+<div id="sheet-root"></div>
+<div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

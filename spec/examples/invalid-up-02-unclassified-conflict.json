@@ -1,0 +1,39 @@
+{
+  "$comment": "異常例：unclassified: false なのに examId が null（仕様書 第4章 B-2）。分類済みを名乗りながら資格が特定できない矛盾した状態なので、パッケージ全体を拒否すること。未分類として送りたいなら unclassified: true にする（up-03 の 4e000005 が正しい例）。",
+  "format": "studylog-transfer",
+  "kind": "up",
+  "schemaVersion": 1,
+  "packageId": "c000000b-0000-4000-8000-00000000000b",
+  "createdAt": "2026-09-22T18:00:00+09:00",
+  "deviceId": "de000001-0000-4000-8000-000000000001",
+  "deviceName": "iPhone",
+  "basedOnPackageId": "d0000003-0000-4000-8000-000000000003",
+  "records": {
+    "sessions": [
+      {
+        "id": "4e00000b-0000-4000-8000-00000000000b",
+        "createdAt": "2026-09-22T10:40:00+09:00",
+        "updatedAt": "2026-09-22T10:40:00+09:00",
+        "quotaId": null,
+        "examId": null,
+        "materialId": null,
+        "subjectId": null,
+        "unclassified": false,
+        "startedAt": "2026-09-22T09:50:00+09:00",
+        "endedAt": "2026-09-22T10:40:00+09:00",
+        "activeSeconds": 3000,
+        "range": null,
+        "correct": null,
+        "attempted": null,
+        "focus": 3,
+        "memo": "",
+        "entryMode": "timer",
+        "deleted": false
+      }
+    ],
+    "mistakes": [],
+    "reviewResults": [],
+    "quotaStatus": []
+  },
+  "includedIds": ["4e00000b-0000-4000-8000-00000000000b"]
+}

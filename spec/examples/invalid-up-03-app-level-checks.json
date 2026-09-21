@@ -1,0 +1,46 @@
+{
+  "$comment": "異常例：JSON Schema は通るが、アプリ側の検証で拒否すべきもの（仕様書 付録B）。(1) includedIds に 2b00000c が抜けており、records の id 集合と一致しない（付録B-2）(2) range が from > to（付録B-1）(3) activeSeconds が endedAt - startedAt を超えている（付録B-3）(4) correct > attempted（付録B-4）。母艦・子機の双方でこれらを検査し、理由を示して拒否すること。",
+  "format": "studylog-transfer",
+  "kind": "up",
+  "schemaVersion": 1,
+  "packageId": "c000000c-0000-4000-8000-00000000000c",
+  "createdAt": "2026-09-22T18:00:00+09:00",
+  "deviceId": "de000001-0000-4000-8000-000000000001",
+  "deviceName": "iPhone",
+  "basedOnPackageId": "d0000003-0000-4000-8000-000000000003",
+  "records": {
+    "sessions": [
+      {
+        "id": "4e00000c-0000-4000-8000-00000000000c",
+        "createdAt": "2026-09-22T10:40:00+09:00",
+        "updatedAt": "2026-09-22T10:40:00+09:00",
+        "quotaId": null,
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "materialId": "3a000001-0000-4000-8000-000000000001",
+        "subjectId": null,
+        "unclassified": false,
+        "startedAt": "2026-09-22T09:50:00+09:00",
+        "endedAt": "2026-09-22T10:40:00+09:00",
+        "activeSeconds": 7200,
+        "range": { "unit": "question", "from": 90, "to": 66 },
+        "correct": 30,
+        "attempted": 25,
+        "focus": 3,
+        "memo": "",
+        "entryMode": "timer",
+        "deleted": false
+      }
+    ],
+    "mistakes": [],
+    "reviewResults": [],
+    "quotaStatus": [
+      {
+        "id": "2b00000c-0000-4000-8000-00000000000c",
+        "quotaId": "9c000004-0000-4000-8000-000000000004",
+        "status": "done",
+        "updatedAt": "2026-09-22T10:41:00+09:00"
+      }
+    ]
+  },
+  "includedIds": ["4e00000c-0000-4000-8000-00000000000c"]
+}

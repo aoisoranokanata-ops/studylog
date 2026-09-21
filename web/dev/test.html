@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StudyLog 子機 テスト</title>
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  body { padding: 16px; }
+  .case { padding: 6px 10px; border-left: 4px solid var(--border); margin: 4px 0; font-size: 0.9rem; }
+  .pass { border-color: var(--ok); }
+  .fail { border-color: var(--danger); background: rgba(200, 60, 60, 0.08); }
+  .group { margin-top: 18px; font-weight: 600; }
+  #summary { position: sticky; top: 0; background: var(--surface); padding: 10px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<h1>StudyLog 子機 テスト</h1>
+<p class="dim small">
+  このページは開発用で、公開（GitHub Pages）には含めません。<br>
+  仕様書のサンプル（<code>spec/examples/</code>）を読むため、<code>studylog/</code> をルートにして配信してください。<br>
+  <strong>注意：</strong>アプリと同じIndexedDBを使うので、実行すると子機のデータは消えます。
+</p>
+<div id="summary" class="dim">実行中…</div>
+<div id="results"></div>
+<script type="module" src="test-suite.js"></script>
+</body>
+</html>

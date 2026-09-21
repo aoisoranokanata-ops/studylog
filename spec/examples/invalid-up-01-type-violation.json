@@ -1,0 +1,55 @@
+{
+  "$comment": "異常例：型違反。(1) activeSeconds が文字列 (2) focus が範囲外（1〜5）(3) deleted が文字列 (4) entryMode が定義外 (5) reason が定義外 (6) records.quotaStatus のキー自体が無い。パッケージ全体を拒否すること（仕様書 第1章-5）。",
+  "format": "studylog-transfer",
+  "kind": "up",
+  "schemaVersion": 1,
+  "packageId": "c000000a-0000-4000-8000-00000000000a",
+  "createdAt": "2026-09-22T18:00:00+09:00",
+  "deviceId": "de000001-0000-4000-8000-000000000001",
+  "deviceName": "iPhone",
+  "basedOnPackageId": null,
+  "records": {
+    "sessions": [
+      {
+        "id": "4e00000a-0000-4000-8000-00000000000a",
+        "createdAt": "2026-09-22T10:40:00+09:00",
+        "updatedAt": "2026-09-22T10:40:00+09:00",
+        "quotaId": null,
+        "examId": "e0000001-0000-4000-8000-000000000001",
+        "materialId": null,
+        "subjectId": null,
+        "unclassified": false,
+        "startedAt": "2026-09-22T09:50:00+09:00",
+        "endedAt": "2026-09-22T10:40:00+09:00",
+        "activeSeconds": "3000",
+        "range": null,
+        "correct": null,
+        "attempted": null,
+        "focus": 9,
+        "memo": "",
+        "entryMode": "stopwatch",
+        "deleted": "false"
+      }
+    ],
+    "mistakes": [
+      {
+        "id": "6f00000a-0000-4000-8000-00000000000a",
+        "createdAt": "2026-09-22T10:42:00+09:00",
+        "updatedAt": "2026-09-22T10:42:00+09:00",
+        "sessionId": "4e00000a-0000-4000-8000-00000000000a",
+        "examId": null,
+        "materialId": null,
+        "subjectId": null,
+        "questionRef": "模試 問7",
+        "memo": "",
+        "reason": "forgot",
+        "deleted": false
+      }
+    ],
+    "reviewResults": []
+  },
+  "includedIds": [
+    "4e00000a-0000-4000-8000-00000000000a",
+    "6f00000a-0000-4000-8000-00000000000a"
+  ]
+}

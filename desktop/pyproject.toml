@@ -1,0 +1,16 @@
+[project]
+name = "studylog"
+version = "0.1.0"
+description = "StudyLog 母艦（資格試験の勉強記録を一元管理する）"
+requires-python = ">=3.13"
+dependencies = [
+    "PySide6>=6.9",
+    # 以下はフェーズ2（転送）で使う
+    "jsonschema>=4.20",
+    "qrcode>=7.4",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+filterwarnings = ["error::DeprecationWarning:studylog.*"]

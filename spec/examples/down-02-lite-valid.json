@@ -1,0 +1,37 @@
+{
+  "format": "studylog-transfer",
+  "kind": "down",
+  "schemaVersion": 1,
+  "packageId": "d0000002-0000-4000-8000-000000000002",
+  "createdAt": "2026-09-21T06:55:00+09:00",
+  "hubId": "11111111-0000-4000-8000-000000000001",
+  "targetDate": "2026-09-21",
+  "variant": "lite",
+  "settings": { "dayChangeHour": 4, "weekStartsOn": 1 },
+  "quotas": [
+    {
+      "id": "9c000004-0000-4000-8000-000000000004",
+      "date": "2026-09-21",
+      "order": 1,
+      "examId": "e0000001-0000-4000-8000-000000000001",
+      "materialId": "3a000001-0000-4000-8000-000000000001",
+      "subjectId": null,
+      "labels": { "exam": "行政書士", "material": "民法 問題集", "subject": null },
+      "title": "民法 問題集 p.66-90",
+      "targetSeconds": 5400,
+      "range": { "unit": "question", "from": 66, "to": 90 }
+    },
+    {
+      "id": "9c000005-0000-4000-8000-000000000005",
+      "date": "2026-09-21",
+      "order": 2,
+      "examId": "e0000001-0000-4000-8000-000000000001",
+      "materialId": null,
+      "subjectId": "5b000003-0000-4000-8000-000000000003",
+      "labels": { "exam": "行政書士", "material": null, "subject": "行政法" },
+      "title": "行政法 復習",
+      "targetSeconds": 2700
+    }
+  ],
+  "acks": ["c0000001-0000-4000-8000-000000000001"]
+}
