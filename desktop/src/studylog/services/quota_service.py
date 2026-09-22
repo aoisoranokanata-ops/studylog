@@ -14,11 +14,16 @@ from .settings_service import SettingsService
 
 class QuotaService:
     def __init__(
-        self, quotas: QuotaRepository, masters: MasterService, settings: SettingsService
+        self,
+        quotas: QuotaRepository,
+        masters: MasterService,
+        settings: SettingsService,
+        plans=None,
     ) -> None:
         self.quotas = quotas
         self.masters = masters
         self.settings = settings
+        self.plans = plans  # PlanService（繰り返しを展開して予定を取る）
         self.conn = quotas.conn
 
     def list(self, day: date, day_to: date | None = None) -> list[Quota]:
@@ -97,29 +102,29 @@ class QuotaService:
                 self.quotas.update(item.id, {"sort_order": order})
 
     def build_from_plans(self, day: date) -> int:
-        """その日の予定からノルマの案を作る（すでに作ってある予定は飛ばす）。"""
-        plans = self.quotas.query(
-            "SELECT * FROM plans WHERE deleted_at IS NULL AND date = ? ORDER BY time_of_day, created_at",
-            (day.isoformat(),),
-        )
+        """その日の予定からノルマの案を作る（繰り返しも展開する。作成済みの予定は飛ばす）。"""
+        if self.plans is None:
+            return 0
+        occurrences = self.plans.for_day(day)
         existing = {quota.plan_id for quota in self.quotas.list(day) if quota.plan_id}
         created = 0
         with transaction(self.conn):
-            for plan in plans:
-                if plan["id"] in existing or not plan["exam_id"]:
+            for occurrence in occurrences:
+                plan = occurrence.plan
+                if plan.id in existing or not plan.exam_id:
                     continue
                 self.create(
                     day=day,
-                    title=plan["title"],
-                    target_seconds=plan["planned_seconds"],
-                    exam_id=plan["exam_id"],
-                    material_id=plan["material_id"],
-                    subject_id=plan["subject_id"],
-                    range_unit=plan["range_unit"],
-                    range_from=plan["range_from"],
-                    range_to=plan["range_to"],
-                    note=plan["note"],
-                    plan_id=plan["id"],
+                    title=plan.title,
+                    target_seconds=plan.planned_seconds,
+                    exam_id=plan.exam_id,
+                    material_id=plan.material_id,
+                    subject_id=plan.subject_id,
+                    range_unit=plan.range_unit,
+                    range_from=plan.range_from,
+                    range_to=plan.range_to,
+                    note=plan.note,
+                    plan_id=plan.id,
                 )
                 created += 1
         return created

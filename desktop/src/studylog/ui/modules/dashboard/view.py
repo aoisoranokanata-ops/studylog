@@ -106,7 +106,7 @@ class DashboardView(QWidget):
         # --- 今日の予定・復習・課題 ---
         lower = QHBoxLayout()
         lower.setSpacing(12)
-        self.plans = Panel("今日のノルマ")
+        self.plans = Panel("今日の予定とノルマ")
         self.plans_body = QVBoxLayout()
         self.plans.body.addLayout(self.plans_body)
         plan_buttons = QHBoxLayout()
@@ -114,8 +114,11 @@ class DashboardView(QWidget):
         start.clicked.connect(lambda: ctx.open_module("timer"))
         send = QPushButton("ノルマを作る・送る")
         send.clicked.connect(lambda: ctx.open_module("transfer"))
+        calendar = QPushButton("カレンダー")
+        calendar.clicked.connect(lambda: ctx.open_module("calendar"))
         plan_buttons.addWidget(start)
         plan_buttons.addWidget(send)
+        plan_buttons.addWidget(calendar)
         plan_buttons.addStretch(1)
         self.plans.body.addLayout(plan_buttons)
         self.plans.body.addStretch(1)
@@ -228,9 +231,32 @@ class DashboardView(QWidget):
 
     def _fill_plans(self, today) -> None:
         _clear(self.plans_body)
+
+        # カレンダーの予定（まだノルマにしていないもの）
         quotas = self.ctx.quotas.list(today)
+        planned_ids = {quota.plan_id for quota in quotas if quota.plan_id}
+        pending = [o for o in self.ctx.plans.for_day(today) if o.plan.id not in planned_ids]
+        if pending:
+            for occurrence in pending:
+                plan = occurrence.plan
+                line = QHBoxLayout()
+                title = QLabel(f"{plan.time_of_day + '　' if plan.time_of_day else ''}{plan.title}")
+                title.setToolTip(plan.note or plan.title)
+                line.addWidget(title, 1)
+                mark = QLabel("予定")
+                mark.setStyleSheet(f"color: {TEXT_SECONDARY.name()};")
+                line.addWidget(mark)
+                value = QLabel(clock.format_hm(plan.planned_seconds))
+                value.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                value.setMinimumWidth(90)
+                line.addWidget(value)
+                self.plans_body.addLayout(line)
+
         if not quotas:
-            self.plans_body.addWidget(_muted("今日のノルマはありません。"))
+            if not pending:
+                self.plans_body.addWidget(_muted("今日の予定・ノルマはありません。"))
+            else:
+                self.plans_body.addWidget(_muted("ノルマにすると、子機へ渡せます（「転送」）。"))
             return
         for quota in quotas:
             actual = self.ctx.quotas.actual_seconds(quota.id)

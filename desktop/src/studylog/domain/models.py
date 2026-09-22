@@ -234,6 +234,67 @@ class Quota:
 
 
 @dataclass(slots=True)
+class Plan:
+    """勉強の予定。繰り返しは1行で持ち、表示のたびに展開する。"""
+
+    id: str
+    date: date
+    exam_id: str | None
+    material_id: str | None
+    subject_id: str | None
+    title: str
+    planned_seconds: int
+    time_of_day: str | None = None      # HH:MM（未設定なら時刻なしの予定）
+    range_unit: str | None = None
+    range_from: int | None = None
+    range_to: int | None = None
+    note: str = ""
+    repeat_rule: str | None = None      # None/none、daily、weekly:1,3,5（1=月曜）
+    repeat_from: date | None = None
+    repeat_until: date | None = None
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> "Plan":
+        return cls(
+            id=row["id"],
+            date=date.fromisoformat(row["date"]),
+            exam_id=row["exam_id"],
+            material_id=row["material_id"],
+            subject_id=row["subject_id"],
+            title=row["title"],
+            planned_seconds=row["planned_seconds"],
+            time_of_day=row["time_of_day"],
+            range_unit=row["range_unit"],
+            range_from=row["range_from"],
+            range_to=row["range_to"],
+            note=row["note"],
+            repeat_rule=row["repeat_rule"],
+            repeat_from=_date(row["repeat_from"]),
+            repeat_until=_date(row["repeat_until"]),
+        )
+
+    @property
+    def repeats(self) -> bool:
+        return bool(self.repeat_rule) and self.repeat_rule != "none"
+
+
+@dataclass(slots=True)
+class PlanOccurrence:
+    """繰り返しを展開した「その日の予定」。"""
+
+    plan: Plan
+    date: date
+
+    @property
+    def is_repeat(self) -> bool:
+        return self.plan.repeats
+
+    @property
+    def sort_key(self) -> tuple:
+        return (self.plan.time_of_day or "99:99", self.plan.title)
+
+
+@dataclass(slots=True)
 class Mistake:
     """誤答。"""
 

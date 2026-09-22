@@ -346,3 +346,100 @@ def test_goals_view_saves_week_goal(qapp, ctx, sample_masters, monkeypatch):
     finally:
         view.deleteLater()
         qapp.processEvents()
+
+
+# --- フェーズ4（計画） ------------------------------------------------------
+
+def test_calendar_shows_month_and_week(qapp, ctx, sample_masters):
+    from datetime import date, timedelta
+
+    from studylog.ui.modules.calendar.view import CalendarView
+
+    today = ctx.stats.today()
+    ctx.plans.create(day=today, title="民法 問題集", planned_seconds=3600,
+                     exam_id=sample_masters["exam_id"], time_of_day="09:00")
+    ctx.plans.create(day=today, title="毎日の復習", planned_seconds=1800,
+                     exam_id=sample_masters["exam_id"], repeat_rule="daily")
+    ctx.masters.set_exam_date(sample_masters["exam_id"], (today + timedelta(days=3)).isoformat())
+
+    view = CalendarView(ctx)
+    try:
+        assert f"{today.year}年{today.month}月" == view.range_label.text()
+        shown = [cell.info.date for cell in view.grid.cells if cell.info and not cell.isHidden()]
+        assert len(shown) in (35, 42)          # 月表示は5〜6週
+        assert today in shown
+        # 選んだ日の予定が右に2件出る
+        view._on_day_selected(today)
+        assert view.day_body.count() >= 2
+
+        view._set_mode("week")
+        shown = [cell.info.date for cell in view.grid.cells if cell.info and not cell.isHidden()]
+        assert len(shown) == 7 and today in shown
+
+        # 前の月へ移動しても落ちない
+        view._set_mode("month")
+        view._move(-1)
+        view._go_today()
+        assert view.anchor == today
+    finally:
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_calendar_starts_timer_from_a_plan(qapp, ctx, sample_masters):
+    from studylog.ui.modules.calendar.view import CalendarView
+
+    today = ctx.stats.today()
+    ctx.plans.create(day=today, title="民法 問題集", planned_seconds=3600, exam_id=sample_masters["exam_id"])
+    view = CalendarView(ctx)
+    try:
+        occurrence = ctx.plans.for_day(today)[0]
+        view._start_timer(occurrence)
+        state = ctx.timer.current()
+        assert state is not None
+        assert state.exam_id == sample_masters["exam_id"]
+        assert state.memo == "民法 問題集"
+    finally:
+        ctx.timer.discard()
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_calendar_builds_quotas_from_plans(qapp, ctx, sample_masters, monkeypatch):
+    from studylog.ui.modules.calendar import view as calendar_view
+
+    monkeypatch.setattr(calendar_view, "show_info", lambda *a, **k: None)
+    today = ctx.stats.today()
+    ctx.plans.create(day=today, title="民法 問題集", planned_seconds=3600, exam_id=sample_masters["exam_id"])
+    view = calendar_view.CalendarView(ctx)
+    try:
+        view._build_quotas()
+        quotas = ctx.quotas.list(today)
+        assert len(quotas) == 1 and quotas[0].title == "民法 問題集"
+    finally:
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_dashboard_lists_todays_plans(qapp, ctx, sample_masters):
+    from studylog.ui.modules.dashboard.view import DashboardView
+
+    today = ctx.stats.today()
+    ctx.plans.create(day=today, title="朝の民法", planned_seconds=3600,
+                     exam_id=sample_masters["exam_id"], time_of_day="07:30")
+    view = DashboardView(ctx)
+    try:
+        texts = []
+        for index in range(view.plans_body.count()):
+            item = view.plans_body.itemAt(index)
+            if item.layout():
+                for sub in range(item.layout().count()):
+                    widget = item.layout().itemAt(sub).widget()
+                    if widget is not None and hasattr(widget, "text"):
+                        texts.append(widget.text())
+            elif item.widget() is not None and hasattr(item.widget(), "text"):
+                texts.append(item.widget().text())
+        assert any("朝の民法" in text for text in texts)
+    finally:
+        view.deleteLater()
+        qapp.processEvents()

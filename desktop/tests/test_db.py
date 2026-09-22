@@ -28,8 +28,8 @@ def test_split_statements_handles_escaped_quote():
 def test_migrate_creates_all_tables(tmp_path):
     conn = connect(tmp_path / "t.db")
     applied = migrator.migrate(conn)
-    assert applied == [1]
-    assert user_version(conn) == 1
+    assert applied == [1, 2]
+    assert user_version(conn) == len(migrator.discover())
     names = {
         row["name"]
         for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -37,9 +37,29 @@ def test_migrate_creates_all_tables(tmp_path):
     for table in (
         "exams", "exam_sittings", "materials", "subjects", "sessions", "timer_state",
         "plans", "quotas", "mistakes", "review_results", "tasks", "weekly_goals",
-        "devices", "imported_packages", "transfer_log", "settings",
+        "devices", "imported_packages", "transfer_log", "settings", "plan_exceptions",
     ):
         assert table in names
+    conn.close()
+
+
+def test_later_migration_applies_to_an_existing_database(tmp_path):
+    """0001 までしか当たっていないDBを開いたら、0002 だけが追加で当たる。"""
+    path = tmp_path / "t.db"
+    conn = connect(path)
+    only_first = tmp_path / "first"
+    only_first.mkdir()
+    first = next(item for item in migrator.discover() if item[0] == 1)[1]
+    (only_first / first.name).write_text(first.read_text(encoding="utf-8"), encoding="utf-8")
+    assert migrator.migrate(conn, only_first) == [1]
+    assert user_version(conn) == 1
+
+    # 本来のフォルダで開き直すと、続きから当たる
+    applied = migrator.migrate(conn)
+    assert applied == [2]
+    names = {row["name"] for row in conn.execute("SELECT name FROM sqlite_master")}
+    assert "plan_exceptions" in names
+    assert "sessions" in names  # 既存の表はそのまま
     conn.close()
 
 

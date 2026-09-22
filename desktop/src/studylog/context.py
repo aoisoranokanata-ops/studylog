@@ -22,6 +22,7 @@ from .repositories.masters import (
     SubjectRepository,
 )
 from .repositories.mistakes import MistakeRepository, ReviewResultRepository
+from .repositories.plans import PlanExceptionRepository, PlanRepository
 from .repositories.quotas import QuotaRepository
 from .repositories.sessions import SessionRepository
 from .repositories.settings import SettingsRepository
@@ -35,6 +36,7 @@ from .repositories.transfer import (
 from .services.backup_service import BackupService
 from .services.goal_service import GoalService
 from .services.master_service import MasterService
+from .services.plan_service import PlanService
 from .services.quota_service import QuotaService
 from .services.review_service import ReviewService
 from .services.session_service import SessionService
@@ -62,6 +64,7 @@ class AppContext:
     transfer: TransferService
     stats: StatsService
     goals: GoalService
+    plans: PlanService
     session_repo: SessionRepository
     mistake_repo: MistakeRepository
     quota_repo: QuotaRepository
@@ -105,10 +108,11 @@ class AppContext:
         sessions = SessionService(session_repo, material_repo, settings)
         timer = TimerService(timer_repo, sessions, settings)
         backups = BackupService(conn, config.backup_dir(), settings)
-        quotas = QuotaService(quota_repo, masters, settings)
         reviews = ReviewService(mistake_repo, review_result_repo, settings)
         goals = GoalService(WeeklyGoalRepository(conn), session_repo, masters, settings)
         stats = StatsService(session_repo, masters, quota_repo, settings)
+        plans = PlanService(PlanRepository(conn), PlanExceptionRepository(conn), masters, settings)
+        quotas = QuotaService(quota_repo, masters, settings, plans)
 
         builder = DownBuilder(
             settings=settings,
@@ -153,6 +157,7 @@ class AppContext:
             transfer=transfer,
             stats=stats,
             goals=goals,
+            plans=plans,
             session_repo=session_repo,
             mistake_repo=mistake_repo,
             quota_repo=quota_repo,
