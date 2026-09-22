@@ -8,13 +8,14 @@ import { card, el, toast } from './components.js';
 const STATUS_LABEL = { none: '未着手', done: '完了', partial: '一部', skipped: 'スキップ' };
 
 export async function render(root, app) {
-  const [inbound, settings, status, week, today, statusMap] = await Promise.all([
+  const [inbound, settings, status, week, today, statusMap, visibleReviews] = await Promise.all([
     store.getInbound(),
     store.getSettings(),
     transfer.status(),
     store.weekSeconds(),
     store.todaySeconds(),
     store.quotaStatusMap(),
+    store.visibleReviews(),
   ]);
 
   if (!inbound) {
@@ -116,15 +117,30 @@ export async function render(root, app) {
     ]),
   );
 
-  // --- 復習・送信状況 ---
+  // --- 今日の復習 ---
   const reviews = inbound.reviews || [];
+  if (reviews.length) {
+    const done = reviews.length - visibleReviews.length;
+    root.append(
+      card('今日の復習', [
+        el('div', { class: 'row-between' }, [
+          el('span', { text: `${reviews.length}件中 ${done}件済み` }),
+          el('span', { class: 'strong', text: visibleReviews.length ? `残り ${visibleReviews.length}件` : '完了' }),
+        ]),
+        el('div', { class: 'bar' }, [el('span', { style: `width:${Math.round((done / reviews.length) * 100)}%` })]),
+        el('button', {
+          type: 'button',
+          class: `btn btn-block ${visibleReviews.length ? 'btn-primary' : ''}`.trim(),
+          text: visibleReviews.length ? '復習する' : '復習の結果を見る',
+          onClick: () => app.go('review'),
+        }),
+      ]),
+    );
+  }
+
+  // --- 送信状況 ---
   root.append(
     card('状況', [
-      el('div', { class: 'row-between' }, [
-        el('span', { text: '今日の復習対象' }),
-        el('span', { class: 'strong', text: `${reviews.length}件` }),
-      ]),
-      reviews.length ? el('div', { class: 'dim small', text: '復習はフェーズ3で記録できるようになります。' }) : null,
       el('div', { class: 'row-between' }, [
         el('span', { text: '未取り込みの記録' }),
         el('span', { class: 'strong', text: `${status.pending}件` }),

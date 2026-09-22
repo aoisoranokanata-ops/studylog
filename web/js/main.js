@@ -7,6 +7,7 @@ import { clear, el, openSheet, toast } from './views/components.js';
 import * as homeView from './views/home.js';
 import * as measureView from './views/measure.js';
 import * as recordsView from './views/records.js';
+import * as reviewView from './views/review.js';
 import * as settingsView from './views/settings.js';
 import * as transferView from './views/transfer.js';
 
@@ -16,6 +17,8 @@ const VIEWS = {
   records: { title: '記録', render: recordsView.render },
   transfer: { title: '転送', render: transferView.render },
   settings: { title: '設定', render: settingsView.render },
+  // タブを持たない画面。tab は下のタブバーでどれを光らせるか
+  review: { title: '復習', render: reviewView.render, tab: 'home' },
 };
 
 const app = {
@@ -24,9 +27,11 @@ const app = {
 
   async go(name) {
     if (!VIEWS[name]) return;
+    if (this.current === 'review' && name !== 'review') reviewView.reset();
     this.current = name;
+    const tabName = VIEWS[name].tab || name;
     for (const tab of document.querySelectorAll('.tab')) {
-      if (tab.dataset.view === name) tab.setAttribute('aria-current', 'page');
+      if (tab.dataset.view === tabName) tab.setAttribute('aria-current', 'page');
       else tab.removeAttribute('aria-current');
     }
     await this.refresh();

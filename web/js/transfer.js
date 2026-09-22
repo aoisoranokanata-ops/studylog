@@ -59,6 +59,8 @@ export async function receiveDown(pkg) {
     quotas: pkg.quotas,
     masters: pkg.variant === 'full' ? pkg.masters : previous.masters || null,
     reviews: 'reviews' in pkg ? pkg.reviews || [] : previous.reviews || [],
+    // 復習一覧を受け取った時刻。これより後に答えた問題は、ackの後も一覧に戻さない
+    reviewsReceivedAt: 'reviews' in pkg ? nowIso() : previous.reviewsReceivedAt || previous.receivedAt || null,
     summary: 'summary' in pkg ? pkg.summary || null : previous.summary || null,
   };
   await store.setInbound(next);

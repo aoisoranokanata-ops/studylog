@@ -28,6 +28,7 @@ function group(name) {
 }
 
 async function test(name, fn) {
+  document.getElementById('summary').textContent = `実行中… ${results.length + 1}件目：${currentGroup} / ${name}`;
   try {
     await fn();
     results.push({ group: currentGroup, name, ok: true });
@@ -478,11 +479,10 @@ await test('参照用データが無ければ未分類のみ', async () => {
 
 group('QRコードの読み取り');
 
+// HTMLImageElement.decode() は画面が裏にあると進まないことがあるので、アプリと同じ createImageBitmap を使う
 async function loadImage(src) {
-  const image = new Image();
-  image.src = src;
-  await image.decode();
-  return image;
+  const bitmap = await createImageBitmap(await (await fetch(src)).blob());
+  return Object.assign(bitmap, { naturalWidth: bitmap.width, naturalHeight: bitmap.height });
 }
 
 const fixtures = await (await fetch('fixtures/fixtures.json')).json();
@@ -585,6 +585,99 @@ await test('誤答を編集すると送信後でも未取り込みに戻る', as
   await pretendSent(pkg, iso(-60 * 1000));
   await saveMistake({ mistake, questionRef: '問1', memo: 'メモを直した', reason: 'careless' });
   equal(await transfer.applyAcks([pkg.packageId]), 0);
+});
+
+
+// --- 復習 -------------------------------------------------------------------
+
+group('復習');
+
+const REVIEW_1 = '7d000001-0000-4000-8000-000000000001';
+const REVIEW_2 = '7d000002-0000-4000-8000-000000000002';
+
+await test('期限の古い順に並ぶ', async () => {
+  await reset();
+  await transfer.receiveDown(await example('down-01-full-valid.json'));
+  const reviews = await store.visibleReviews();
+  equal(reviews.map((review) => review.mistakeId), [REVIEW_2, REVIEW_1]); // 09-19 → 09-20
+});
+
+await test('答えた問題は一覧から消え、結果は上りに入る', async () => {
+  await reset();
+  await transfer.receiveDown(await example('down-01-full-valid.json'));
+  await store.recordReview(REVIEW_1, 'ok');
+  await store.recordReview(REVIEW_2, 'ng');
+
+  equal((await store.visibleReviews()).length, 0);
+  const pkg = await transfer.buildUpPackage();
+  equal(pkg.records.reviewResults.map((r) => r.result).sort(), ['ng', 'ok']);
+  const check = validateUp(pkg);
+  assert(check.ok, check.errors.join(' / '));
+});
+
+await test('未ackの回答がある問題は、同じ問題が届いても出さない（B-11）', async () => {
+  await reset();
+  await transfer.receiveDown(await example('down-01-full-valid.json'));
+  await store.recordReview(REVIEW_1, 'ok');
+  // 母艦がまだ取り込んでいないので、翌朝の下りにも同じ問題が入ってくる
+  const next = await example('down-01-full-valid.json');
+  next.packageId = store.newId();
+  await transfer.receiveDown(next);
+  const ids = (await store.visibleReviews()).map((review) => review.mistakeId);
+  assert(!ids.includes(REVIEW_1), '答えた問題がまた出ています');
+  assert(ids.includes(REVIEW_2), 'まだの問題が消えています');
+});
+
+await test('ack後に新しい一覧で同じ問題が来たら、また出る（不正解で翌日に戻ったなど）', async () => {
+  await reset();
+  await transfer.receiveDown(await example('down-01-full-valid.json'));
+  await store.recordReview(REVIEW_1, 'ng');
+  const pkg = await transfer.buildUpPackage();
+  await pretendSent(pkg, iso(-60 * 1000));
+
+  const next = await example('down-01-full-valid.json');
+  next.packageId = store.newId();
+  next.acks = [pkg.packageId];
+  await new Promise((resolve) => setTimeout(resolve, 1100)); // 受け取り時刻を回答より後にする
+  await transfer.receiveDown(next);
+  const ids = (await store.visibleReviews()).map((review) => review.mistakeId);
+  assert(ids.includes(REVIEW_1), '母艦が出し直した問題が出ていません');
+});
+
+await test('一覧が維持されたままackされても、答えた問題は戻らない', async () => {
+  await reset();
+  await transfer.receiveDown(await example('down-01-full-valid.json'));
+  await store.recordReview(REVIEW_1, 'ok');
+  const pkg = await transfer.buildUpPackage();
+  await pretendSent(pkg, iso(1000));
+
+  // reviews キーの無い下り（前回の一覧を維持）で ack だけ届く
+  const lite = await example('down-02-lite-valid.json');
+  lite.packageId = store.newId();
+  lite.acks = [pkg.packageId];
+  await transfer.receiveDown(lite);
+
+  const ids = (await store.visibleReviews()).map((review) => review.mistakeId);
+  assert(!ids.includes(REVIEW_1), 'ack済みの回答で問題が戻ってきました');
+  equal(ids, [REVIEW_2]);
+});
+
+await test('送る前なら押し間違いを取り消せる', async () => {
+  await reset();
+  await transfer.receiveDown(await example('down-01-full-valid.json'));
+  const result = await store.recordReview(REVIEW_1, 'ng');
+  equal(await store.removeReviewResult(result.id), 'removed');
+  const ids = (await store.visibleReviews()).map((review) => review.mistakeId);
+  assert(ids.includes(REVIEW_1), '取り消した問題が戻っていません');
+});
+
+await test('送った後の結果は取り消せない（追記専用）', async () => {
+  await reset();
+  await transfer.receiveDown(await example('down-01-full-valid.json'));
+  const result = await store.recordReview(REVIEW_1, 'ok');
+  const pkg = await transfer.buildUpPackage();
+  await pretendSent(pkg, iso(-1000));
+  equal(await store.removeReviewResult(result.id), 'sent');
 });
 
 // --- 結果の表示 -------------------------------------------------------------

@@ -1,7 +1,7 @@
 // Service Worker。初回の読み込み後は完全にオフラインで動く。
 // キャッシュ名のバージョンを上げると、新しい版として配られる。
 
-const VERSION = 'v0.2.0';
+const VERSION = 'v0.3.0';
 const PREFIX = 'studylog-';
 const CACHE = `${PREFIX}${VERSION}`;
 
@@ -28,6 +28,7 @@ const ASSETS = [
   'js/views/finish-sheet.js',
   'js/views/mistake-sheet.js',
   'js/views/qr-scan.js',
+  'js/views/review.js',
   'vendor/jsQR.js',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -63,7 +64,10 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
-  if (new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  // 開発用のテストページはキャッシュしない（古いテストが走らないように。公開物には含まれない）
+  if (url.pathname.includes('/dev/')) return;
 
   event.respondWith(
     (async () => {

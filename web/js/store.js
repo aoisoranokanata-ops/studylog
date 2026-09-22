@@ -190,6 +190,43 @@ export async function putReviewResult(result) {
   return record;
 }
 
+/** 復習の結果を1件記録する。result は 'ok'（できた）か 'ng'（できなかった）。 */
+export async function recordReview(mistakeId, result) {
+  return putReviewResult({ id: newId(), mistakeId, result, reviewedAt: nowIso() });
+}
+
+/**
+ * 押し間違いの取り消し。追記専用なので、まだ送っていない結果だけ消せる。
+ * 戻り値: 'removed' / 'sent'（送信済みなので消せない） / 'missing'
+ */
+export async function removeReviewResult(id) {
+  const record = await db.get('reviewResults', id);
+  if (!record) return 'missing';
+  if (record.state === 'acked' || (await wasSent(id))) return 'sent';
+  await db.remove('reviewResults', id);
+  return 'removed';
+}
+
+/**
+ * いま表示すべき復習対象。未ackの回答がある問題は外す（転送仕様書 B-11：二重回答を防ぐ）。
+ * 期限の古い順に並べる。
+ */
+export async function visibleReviews() {
+  const [inbound, results] = await Promise.all([getInbound(), db.getAll('reviewResults')]);
+  const reviews = inbound?.reviews || [];
+  const since = inbound?.reviewsReceivedAt || null;
+  // 未ackの回答がある問題（B-11）に加え、この一覧を受け取った後に答えた問題も外す。
+  // 下りに reviews が無いと前回の一覧が残る（B-1）ので、ack済みになった回答で問題が戻ってこないようにする。
+  const answered = new Set(
+    results
+      .filter((result) => result.state !== 'acked' || (since && result.reviewedAt >= since))
+      .map((result) => result.mistakeId),
+  );
+  return reviews
+    .filter((review) => !answered.has(review.mistakeId))
+    .sort((a, b) => (a.dueDate === b.dueDate ? 0 : a.dueDate < b.dueDate ? -1 : 1));
+}
+
 export async function setQuotaStatus(quotaId, status) {
   const existing = (await db.getAllByIndex('quotaStatus', 'quotaId', quotaId))[0];
   const record = touch({
