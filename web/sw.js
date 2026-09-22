@@ -1,7 +1,7 @@
 // Service Worker。初回の読み込み後は完全にオフラインで動く。
 // キャッシュ名のバージョンを上げると、新しい版として配られる。
 
-const VERSION = 'v0.1.2';
+const VERSION = 'v0.2.0';
 const PREFIX = 'studylog-';
 const CACHE = `${PREFIX}${VERSION}`;
 
@@ -26,6 +26,9 @@ const ASSETS = [
   'js/views/transfer.js',
   'js/views/settings.js',
   'js/views/finish-sheet.js',
+  'js/views/mistake-sheet.js',
+  'js/views/qr-scan.js',
+  'vendor/jsQR.js',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/maskable-512.png',

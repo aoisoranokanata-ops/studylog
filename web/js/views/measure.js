@@ -5,6 +5,7 @@ import * as store from '../store.js';
 import * as timer from '../timer.js';
 import { card, classificationPicker, confirmSheet, el, toast } from './components.js';
 import { openFinishSheet } from './finish-sheet.js';
+import { openMistakeSheet } from './mistake-sheet.js';
 
 let tick = null;
 
@@ -140,11 +141,24 @@ async function finish(app, state, quota) {
   const result = await openFinishSheet({ state, elapsed, quota });
   if (!result) return;
 
-  await timer.finish(result.values);
+  const session = await timer.finish(result.values);
   if (result.quotaStatus && state.quotaId) {
     await store.setQuotaStatus(state.quotaId, result.quotaStatus);
   }
   app.releaseWakeLock();
   toast('記録しました');
-  app.go('home');
+  // 先にホームへ戻す（誤答シートの後ろに「計測中」の画面が残って見えないように）
+  await app.go('home');
+
+  if (result.addMistakes) {
+    const count = await openMistakeSheet({
+      base: {
+        sessionId: session.id,
+        examId: session.examId,
+        materialId: session.materialId,
+        subjectId: session.subjectId,
+      },
+    });
+    if (count) await app.refresh();
+  }
 }

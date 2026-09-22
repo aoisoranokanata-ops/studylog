@@ -6,6 +6,7 @@ import * as store from '../store.js';
 import * as transfer from '../transfer.js';
 import { NeedsUpdateError } from '../validate.js';
 import { card, el, openSheet, toast } from './components.js';
+import { scanQr } from './qr-scan.js';
 
 export async function render(root, app) {
   const [status, device] = await Promise.all([transfer.status(), store.getDevice()]);
@@ -48,7 +49,17 @@ export async function render(root, app) {
 
   root.append(
     card('母艦から受け取る', [
-      el('label', { text: 'ファイルを選ぶ' }),
+      el('button', {
+        type: 'button',
+        class: 'btn btn-primary btn-block',
+        text: 'QRコードを読み取る',
+        disabled: !supportsDecompression(),
+        onClick: async () => {
+          const text = await scanQr();
+          if (text) await receive(app, () => transfer.receiveText(text));
+        },
+      }),
+      el('label', { text: 'ファイルを選ぶ（初回や、ノルマが多いとき）' }),
       fileInput,
       el('button', {
         type: 'button',
@@ -58,7 +69,7 @@ export async function render(root, app) {
       }),
       supportsDecompression()
         ? null
-        : el('p', { class: 'dim small', text: 'このブラウザは文字列（SL1:）の展開に対応していません。ファイルで受け取ってください。' }),
+        : el('p', { class: 'dim small', text: 'このブラウザはQRコード・文字列（SL1:）の展開に対応していません。ファイルで受け取ってください。' }),
       status.inbound
         ? el('div', { class: 'dim small', text: `最後に受け取ったのは ${formatDateTime(status.inbound.receivedAt)}（${status.inbound.targetDate}・${status.inbound.variant}）` })
         : el('div', { class: 'dim small', text: 'まだ受け取っていません' }),

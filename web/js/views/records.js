@@ -15,21 +15,34 @@ import {
   toast,
   toLocalInput,
 } from './components.js';
+import { openMistakeSheet, REASONS } from './mistake-sheet.js';
 
 export async function render(root, app) {
-  const [sessions, settings, options] = await Promise.all([
+  const [sessions, mistakes, settings, options] = await Promise.all([
     store.listRecords('sessions'),
+    store.listRecords('mistakes'),
     store.getSettings(),
     store.classificationOptions(),
   ]);
 
   root.append(
-    el('button', {
-      type: 'button',
-      class: 'btn btn-primary btn-block',
-      text: '手動で記録を追加',
-      onClick: () => openManualSheet(app, options),
-    }),
+    el('div', { class: 'btn-row' }, [
+      el('button', {
+        type: 'button',
+        class: 'btn btn-primary',
+        text: '手動で記録',
+        onClick: () => openManualSheet(app, options),
+      }),
+      el('button', {
+        type: 'button',
+        class: 'btn',
+        text: '誤答を登録',
+        onClick: async () => {
+          const count = await openMistakeSheet();
+          if (count) app.refresh();
+        },
+      }),
+    ]),
   );
 
   const sorted = [...sessions].sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
@@ -42,6 +55,17 @@ export async function render(root, app) {
       pending.length
         ? await Promise.all(pending.map((session) => row(session, settings, app, true)))
         : [el('p', { class: 'empty', text: '未取り込みの記録はありません' })],
+    ),
+  );
+
+  const sortedMistakes = [...mistakes].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const pendingMistakes = sortedMistakes.filter((mistake) => mistake.state !== 'acked');
+  root.append(
+    card(
+      `誤答（未取り込み ${pendingMistakes.length}件）`,
+      sortedMistakes.length
+        ? await Promise.all(sortedMistakes.map((mistake) => mistakeRow(mistake, app)))
+        : [el('p', { class: 'empty', text: '誤答はまだありません' })],
     ),
   );
 
@@ -84,6 +108,46 @@ async function row(session, settings, app, editable) {
             onClick: async () => {
               if (!(await confirmSheet('記録を取り消す', 'この記録を取り消します。よろしいですか？', { okText: '取り消す', danger: true }))) return;
               const result = await store.removeSession(session.id);
+              toast(result === 'marked' ? '取り消しを母艦に伝えます' : '削除しました');
+              app.refresh();
+            },
+          }),
+        ])
+      : null,
+  ]);
+}
+
+async function mistakeRow(mistake, app) {
+  const labels = await store.labelsFor(mistake);
+  const where = [labels.exam, labels.material, labels.subject].filter(Boolean).join('　') || '未分類';
+  const editable = mistake.state !== 'acked' && !mistake.deleted;
+  return el('div', { class: 'record' }, [
+    el('div', { class: 'row-between' }, [
+      el('span', { class: 'strong truncate grow', text: mistake.questionRef }),
+      mistake.state === 'acked'
+        ? el('span', { class: 'badge badge-acked', text: '取り込み済み' })
+        : el('span', { class: 'badge badge-pending', text: '未取り込み' }),
+    ]),
+    el('div', { class: 'small', text: mistake.memo }),
+    el('div', { class: 'dim small', text: [where, REASONS[mistake.reason]].filter(Boolean).join('　') }),
+    mistake.deleted ? el('span', { class: 'badge', text: '取り消し済み（送信待ち）' }) : null,
+    editable
+      ? el('div', { class: 'row' }, [
+          el('button', {
+            type: 'button',
+            class: 'btn btn-small',
+            text: '編集',
+            onClick: async () => {
+              if (await openMistakeSheet({ mistake })) app.refresh();
+            },
+          }),
+          el('button', {
+            type: 'button',
+            class: 'btn btn-small btn-danger',
+            text: '取り消す',
+            onClick: async () => {
+              if (!(await confirmSheet('誤答を取り消す', `「${mistake.questionRef}」を取り消します。`, { okText: '取り消す', danger: true }))) return;
+              const result = await store.removeMistake(mistake.id);
               toast(result === 'marked' ? '取り消しを母艦に伝えます' : '削除しました');
               app.refresh();
             },

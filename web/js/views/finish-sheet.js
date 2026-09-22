@@ -41,6 +41,19 @@ export function openFinishSheet({ state, elapsed, quota }) {
     el('option', { value: 'skipped', text: 'スキップ' }),
   ]);
 
+  // 保存のあと、そのまま誤答の登録へ進むか（既定は進まない＝終了→保存の2タップを保つ）
+  let addMistakes = false;
+  const mistakeToggle = el('button', {
+    type: 'button',
+    class: 'chip',
+    text: '保存したら誤答を登録する',
+    'aria-pressed': 'false',
+    onClick: () => {
+      addMistakes = !addMistakes;
+      mistakeToggle.setAttribute('aria-pressed', String(addMistakes));
+    },
+  });
+
   const computeDuration = () => {
     try {
       const span = Math.floor((fromLocalInput(endedAt.value).getTime() - parseIso(state.startedAt).getTime()) / 1000);
@@ -75,6 +88,7 @@ export function openFinishSheet({ state, elapsed, quota }) {
     ]),
     field('集中度（任意）', focus),
     field('メモ（任意）', memo),
+    el('div', { class: 'chips' }, [mistakeToggle]),
   ];
 
   const collect = () => {
@@ -110,6 +124,7 @@ export function openFinishSheet({ state, elapsed, quota }) {
         memo: memo.value.trim(),
       },
       quotaStatus: quotaStatus.value || null,
+      addMistakes,
     };
   };
 

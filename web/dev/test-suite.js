@@ -8,6 +8,8 @@ import * as store from '../js/store.js';
 import * as timer from '../js/timer.js';
 import * as transfer from '../js/transfer.js';
 import { NeedsUpdateError, validateDown, validateUp } from '../js/validate.js';
+import { lastClassification, saveMistake } from '../js/views/mistake-sheet.js';
+import { decodeImage, loadJsQr } from '../js/views/qr-scan.js';
 
 // 安全装置：テストは子機と同じIndexedDBを消すので、手元の開発サーバでしか動かさない。
 // 万一公開先に置かれても、スマホの本番データを消さないようにする。
@@ -469,6 +471,120 @@ await test('参照用データが無ければ未分類のみ', async () => {
   const options = await store.classificationOptions();
   equal(options.hasMasters, false);
   equal(options.exams.length, 0);
+});
+
+
+// --- QRコード（母艦が描いた画像を子機で読む） -------------------------------
+
+group('QRコードの読み取り');
+
+async function loadImage(src) {
+  const image = new Image();
+  image.src = src;
+  await image.decode();
+  return image;
+}
+
+const fixtures = await (await fetch('fixtures/fixtures.json')).json();
+
+for (const fixture of fixtures) {
+  await test(`母艦のQR（${fixture.bytes}バイト・ノルマ${fixture.quotas}件）を読める`, async () => {
+    const jsQR = await loadJsQr();
+    const image = await loadImage(`fixtures/${fixture.file}`);
+    const text = decodeImage(jsQR, image, image.naturalWidth, image.naturalHeight, document.createElement('canvas'));
+    assert(text, 'QRコードを見つけられませんでした');
+    assert(text.startsWith('SL1:'), text.slice(0, 20));
+    const pkg = await codec.decode(text);
+    equal(pkg.packageId, fixture.packageId);
+    const result = validateDown(pkg);
+    assert(result.ok, result.errors.join(' / '));
+  });
+}
+
+await test('小さく写っても読める（半分に縮小）', async () => {
+  const jsQR = await loadJsQr();
+  const fixture = fixtures.find((item) => item.file === 'qr-max.png');
+  const image = await loadImage(`fixtures/${fixture.file}`);
+  const small = document.createElement('canvas');
+  small.width = Math.round(image.naturalWidth / 2);
+  small.height = Math.round(image.naturalHeight / 2);
+  small.getContext('2d').drawImage(image, 0, 0, small.width, small.height);
+  const text = decodeImage(jsQR, small, small.width, small.height, document.createElement('canvas'));
+  assert(text, '縮小すると読めませんでした');
+  equal((await codec.decode(text)).packageId, fixture.packageId);
+});
+
+await test('読み取った文字列をそのまま受け取れる', async () => {
+  await reset();
+  const jsQR = await loadJsQr();
+  const image = await loadImage('fixtures/qr-lite.png');
+  const text = decodeImage(jsQR, image, image.naturalWidth, image.naturalHeight, document.createElement('canvas'));
+  const summary = await transfer.receiveText(text);
+  equal(summary.quotas, 2);
+  equal(summary.variant, 'lite');
+});
+
+// --- 誤答 -------------------------------------------------------------------
+
+group('誤答の簡易登録');
+
+await test('直前の記録の分類を引き継ぐ', async () => {
+  await reset();
+  await makeSession({ examId: 'e0000001-0000-4000-8000-000000000001', startedAt: iso(-7200 * 1000), endedAt: iso(-5400 * 1000) });
+  const latest = await makeSession({
+    examId: 'e0000001-0000-4000-8000-000000000001',
+    materialId: '3a000001-0000-4000-8000-000000000001',
+  });
+  const base = await lastClassification();
+  equal(base.sessionId, latest.id);
+  equal(base.materialId, '3a000001-0000-4000-8000-000000000001');
+});
+
+await test('登録した誤答が上りに入り、仕様どおりの形になる', async () => {
+  await reset();
+  const session = await makeSession({ examId: 'e0000001-0000-4000-8000-000000000001' });
+  const base = await lastClassification();
+  await saveMistake({ base, questionRef: ' p.52 問3 ', memo: '取消権の期間', reason: 'confusion' });
+  await saveMistake({ base, questionRef: 'p.58 問12', memo: '起算点', reason: null });
+
+  const pkg = await transfer.buildUpPackage();
+  equal(pkg.records.mistakes.length, 2);
+  const first = pkg.records.mistakes.find((item) => item.questionRef === 'p.52 問3');
+  assert(first, '前後の空白が取り除かれていません');
+  equal(first.sessionId, session.id);
+  equal(first.reason, 'confusion');
+  equal(first.deleted, false);
+  const check = validateUp(pkg);
+  assert(check.ok, check.errors.join(' / '));
+});
+
+await test('送る前の誤答を取り消すと消える', async () => {
+  await reset();
+  const mistake = await saveMistake({ base: {}, questionRef: '問1', memo: 'メモ', reason: null });
+  equal(await store.removeMistake(mistake.id), 'removed');
+  assert(!(await store.getMistake(mistake.id)), '残っています');
+});
+
+await test('送った後の誤答を取り消すと deleted で母艦に伝える', async () => {
+  await reset();
+  const mistake = await saveMistake({ base: {}, questionRef: '問1', memo: 'メモ', reason: null });
+  const pkg = await transfer.buildUpPackage();
+  await pretendSent(pkg, iso(-1000));
+  equal(await store.removeMistake(mistake.id), 'marked');
+  const stored = await store.getMistake(mistake.id);
+  equal(stored.deleted, true);
+  equal(stored.state, 'pending');
+  const next = await transfer.buildUpPackage();
+  equal(next.records.mistakes[0].deleted, true);
+});
+
+await test('誤答を編集すると送信後でも未取り込みに戻る', async () => {
+  await reset();
+  const mistake = await saveMistake({ base: {}, questionRef: '問1', memo: 'メモ', reason: null });
+  const pkg = await transfer.buildUpPackage();
+  await pretendSent(pkg, iso(-60 * 1000));
+  await saveMistake({ mistake, questionRef: '問1', memo: 'メモを直した', reason: 'careless' });
+  equal(await transfer.applyAcks([pkg.packageId]), 0);
 });
 
 // --- 結果の表示 -------------------------------------------------------------

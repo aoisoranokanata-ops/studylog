@@ -166,6 +166,23 @@ export async function putMistake(mistake) {
   return record;
 }
 
+export async function getMistake(id) {
+  return db.get('mistakes', id);
+}
+
+/** 誤答の取り消し。送ったことが無ければ消し、送っていれば deleted にして母艦へ伝える。 */
+export async function removeMistake(id) {
+  const mistake = await getMistake(id);
+  if (!mistake) return 'missing';
+  if (mistake.state === 'acked') return 'acked';
+  if (await wasSent(id)) {
+    await db.put('mistakes', touch({ ...mistake, deleted: true }));
+    return 'marked';
+  }
+  await db.remove('mistakes', id);
+  return 'removed';
+}
+
 export async function putReviewResult(result) {
   // 復習結果は追記専用（転送仕様書 A-2）。updatedAt は持たない。
   const record = { ...result, state: 'pending', ackedAt: null };

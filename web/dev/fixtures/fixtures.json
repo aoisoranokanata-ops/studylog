@@ -1,0 +1,14 @@
+[
+  {
+    "file": "qr-lite.png",
+    "packageId": "d0000002-0000-4000-8000-000000000002",
+    "bytes": 596,
+    "quotas": 2
+  },
+  {
+    "file": "qr-max.png",
+    "packageId": "0f9a385d-a2fe-4c41-823b-48b31f3d1b58",
+    "bytes": 1767,
+    "quotas": 16
+  }
+]
