@@ -127,11 +127,17 @@ class DashboardView(QWidget):
         self.reviews_body = QVBoxLayout()
         self.reviews.body.addLayout(self.reviews_body)
         self.reviews.body.addStretch(1)
+        review_button = QPushButton("復習を始める")
+        review_button.clicked.connect(lambda: ctx.open_module("mistakes"))
+        self.reviews.body.addWidget(review_button)
 
         self.tasks = Panel("期限が近い課題")
         self.tasks_body = QVBoxLayout()
         self.tasks.body.addLayout(self.tasks_body)
         self.tasks.body.addStretch(1)
+        task_button = QPushButton("課題を開く")
+        task_button.clicked.connect(lambda: ctx.open_module("tasks"))
+        self.tasks.body.addWidget(task_button)
 
         lower.addWidget(self.plans, 3)
         lower.addWidget(self.reviews, 2)

@@ -52,6 +52,25 @@ class ExamSittingRepository(BaseRepository):
         row = self.primary(exam_id)
         return row["exam_date"] if row else None
 
+    def record_result(
+        self,
+        sitting_id: str,
+        *,
+        score: int | None,
+        passed: bool | None,
+        memo: str = "",
+        certificate_on: str | None = None,
+    ) -> None:
+        self.update(
+            sitting_id,
+            {
+                "result_score": score,
+                "result_passed": None if passed is None else (1 if passed else 0),
+                "result_memo": memo,
+                "certificate_received_on": certificate_on,
+            },
+        )
+
     def set_primary_date(self, exam_id: str, exam_date: str | None, label: str = "") -> None:
         """主たる試験日を入れ替える（無ければ作る、None なら消す）。"""
         row = self.primary(exam_id)

@@ -36,12 +36,15 @@ from .repositories.transfer import (
 from .services.backup_service import BackupService
 from .services.goal_service import GoalService
 from .services.master_service import MasterService
+from .services.mistake_service import MistakeService
 from .services.plan_service import PlanService
 from .services.quota_service import QuotaService
+from .services.result_service import ResultService
 from .services.review_service import ReviewService
 from .services.session_service import SessionService
 from .services.settings_service import SettingsService
 from .services.stats_service import StatsService
+from .services.task_service import TaskService
 from .services.timer_service import TimerService
 from .services.transfer.down_builder import DownBuilder
 from .services.transfer.service import TransferService
@@ -65,6 +68,9 @@ class AppContext:
     stats: StatsService
     goals: GoalService
     plans: PlanService
+    mistakes: MistakeService
+    tasks: TaskService
+    results: ResultService
     session_repo: SessionRepository
     mistake_repo: MistakeRepository
     quota_repo: QuotaRepository
@@ -111,6 +117,10 @@ class AppContext:
         reviews = ReviewService(mistake_repo, review_result_repo, settings)
         goals = GoalService(WeeklyGoalRepository(conn), session_repo, masters, settings)
         stats = StatsService(session_repo, masters, quota_repo, settings)
+        task_repo = TaskRepository(conn)
+        mistake_service = MistakeService(mistake_repo, review_result_repo, reviews, masters, settings)
+        task_service = TaskService(task_repo, settings)
+        result_service = ResultService(sitting_repo, masters, session_repo, mistake_repo, stats)
         plans = PlanService(PlanRepository(conn), PlanExceptionRepository(conn), masters, settings)
         quotas = QuotaService(quota_repo, masters, settings, plans)
 
@@ -158,10 +168,13 @@ class AppContext:
             stats=stats,
             goals=goals,
             plans=plans,
+            mistakes=mistake_service,
+            tasks=task_service,
+            results=result_service,
             session_repo=session_repo,
             mistake_repo=mistake_repo,
             quota_repo=quota_repo,
-            task_repo=TaskRepository(conn),
+            task_repo=task_repo,
             applied_migrations=applied,
         )
         if backup_on_start and not is_new:

@@ -27,7 +27,8 @@ def qapp():
 
 def test_modules_are_discovered():
     modules = {module.id for module in discover()}
-    assert {"dashboard", "timer", "records", "stats", "goals", "masters", "transfer", "unclassified", "settings"} <= modules
+    assert {"dashboard", "timer", "records", "stats", "goals", "masters", "transfer",
+            "unclassified", "settings", "mistakes", "tasks", "results"} <= modules
 
 
 def test_main_window_opens_every_module(qapp, ctx, sample_masters):
@@ -442,4 +443,111 @@ def test_dashboard_lists_todays_plans(qapp, ctx, sample_masters):
         assert any("朝の民法" in text for text in texts)
     finally:
         view.deleteLater()
+        qapp.processEvents()
+
+
+# --- フェーズ5の画面 ---------------------------------------------------------
+
+def test_mistakes_view_shows_list_and_review_card(qapp, ctx, sample_masters):
+    from studylog.ui.modules.mistakes.view import MistakesView
+
+    today = ctx.mistakes.today()
+    mistake_id = ctx.mistakes.create(
+        question_ref="p.52 問3", memo="取消権の期間", answer_memo="追認できる時から5年",
+        exam_id=sample_masters["exam_id"], subject_id=sample_masters["subject_id"], reason="knowledge",
+    )
+    ctx.mistakes.mistakes.update(mistake_id, {"next_review_on": today.isoformat()})   # 今日が復習日
+
+    view = MistakesView(ctx)
+    try:
+        assert view.list_tab.table.rowCount() == 1
+        assert view.review_tab.current is not None
+        assert view.review_tab.answer.isHidden()          # 正解は伏せたまま始まる
+        view.review_tab._reveal()
+        assert not view.review_tab.answer.isHidden()
+
+        view.review_tab._answer("ok")
+        qapp.processEvents()
+        assert view.review_tab.current is None            # 今日の分は終わり
+        assert ctx.mistakes.get(mistake_id).consecutive_ok == 1
+
+        view.weak_tab.refresh()
+        assert view.weak_tab.tile_total.value.text() == "1件"
+    finally:
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_tasks_view_checkbox_completes_a_task(qapp, ctx, sample_masters):
+    from datetime import timedelta
+
+    from PySide6.QtCore import Qt
+
+    from studylog.ui.modules.tasks.view import TasksView
+
+    today = ctx.tasks.today()
+    task_id = ctx.tasks.create(content="模試の申し込み", due_on=today + timedelta(days=2), priority=1)
+    ctx.tasks.create(content="期限なしの用事")
+
+    view = TasksView(ctx)
+    try:
+        assert view.table.rowCount() == 2
+        assert view.table.item(0, 1).text() == "模試の申し込み"
+        assert view.table.item(0, 4).text() == "あと2日"
+
+        view.table.item(0, 0).setCheckState(Qt.CheckState.Checked)   # チェックで完了
+        qapp.processEvents()
+        assert ctx.tasks.list()[-1]["id"] == task_id
+        assert ctx.tasks.count_open() == 1
+
+        view.hide_done.setChecked(True)
+        assert view.table.rowCount() == 1
+    finally:
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_results_view_lists_sittings_and_achievements(qapp, ctx, sample_masters):
+    from datetime import date
+
+    from studylog.ui.modules.results.view import ResultsView
+
+    exam = sample_masters["exam_id"]
+    passed = ctx.results.add_sitting(exam, date(2025, 11, 9), "2025年度")
+    ctx.results.record_result(passed, score=190, passed=True, certificate_on=date(2026, 1, 20))
+    ctx.results.add_sitting(exam, date(2026, 11, 8), "2026年度")
+
+    view = ResultsView(ctx)
+    try:
+        assert view.table.rowCount() == 2
+        assert view.achievements.rowCount() == 1
+        assert view.achievements.item(0, 0).text() == "行政書士"
+        assert "合格" in view.status.text()
+
+        view.table.setCurrentCell(1, 0)
+        view._make_primary()
+        assert ctx.masters.exam_date(exam) == "2026-11-08"          # カウントダウンが移る
+        marked = [view.table.item(row, 0).text() for row in range(view.table.rowCount())
+                  if view.table.item(row, 0).text().startswith("★")]
+        assert marked == ["★ 2026年度"]
+    finally:
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_summary_dialog_renders_the_numbers(qapp, ctx, sample_masters):
+    from studylog.ui.modules.results.dialogs import SummaryDialog
+
+    exam = sample_masters["exam_id"]
+    ctx.sessions.create(
+        started_at=local(2026, 6, 1, 9), ended_at=local(2026, 6, 1, 11), active_seconds=7200,
+        exam_id=exam, subject_id=sample_masters["subject_id"],
+    )
+    summary = ctx.results.summary(exam)
+    dialog = SummaryDialog(summary)
+    try:
+        assert "行政書士" in dialog.windowTitle() or dialog.windowTitle() == "振り返り"
+        assert summary.total_seconds == 7200
+    finally:
+        dialog.deleteLater()
         qapp.processEvents()
