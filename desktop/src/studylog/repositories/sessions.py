@@ -74,6 +74,38 @@ class SessionRepository(BaseRepository):
         row = self.conn.execute(f"SELECT COUNT(*) AS n FROM sessions WHERE {where}", params).fetchone()
         return int(row["n"])
 
+    def totals_by(self, column: str, filters: SessionFilter) -> list[tuple[str | None, int]]:
+        """資格・参考書・分野ごとの合計秒（多い順）。column は exam_id/material_id/subject_id。"""
+        if column not in ("exam_id", "material_id", "subject_id"):
+            raise ValueError(f"集計できない列: {column}")
+        where, params = self._where(filters)
+        rows = self.query(
+            f"SELECT {column} AS key, SUM(active_seconds) AS total FROM sessions "
+            f"WHERE {where} GROUP BY {column} ORDER BY total DESC",
+            params,
+        )
+        return [(row["key"], int(row["total"] or 0)) for row in rows]
+
+    def accuracy_by_subject(self, filters: SessionFilter) -> list[tuple[str | None, int, int]]:
+        """分野ごとの（正答数, 解答数）。どちらも入っている記録だけを数える。"""
+        where, params = self._where(filters)
+        rows = self.query(
+            f"SELECT subject_id AS key, SUM(correct) AS correct, SUM(attempted) AS attempted "
+            f"FROM sessions WHERE {where} AND correct IS NOT NULL AND attempted IS NOT NULL "
+            f"AND attempted > 0 GROUP BY subject_id ORDER BY attempted DESC",
+            params,
+        )
+        return [(row["key"], int(row["correct"]), int(row["attempted"])) for row in rows]
+
+    def all_study_dates(self, date_to: date | None = None) -> list[date]:
+        sql = "SELECT DISTINCT study_date AS d FROM sessions WHERE deleted_at IS NULL"
+        params: list = []
+        if date_to:
+            sql += " AND study_date <= ?"
+            params.append(date_to.isoformat())
+        rows = self.query(sql + " ORDER BY study_date", params)
+        return [date.fromisoformat(row["d"]) for row in rows]
+
     def study_days(self, date_from: date, date_to: date) -> list[date]:
         rows = self.query(
             "SELECT DISTINCT study_date AS d FROM sessions "

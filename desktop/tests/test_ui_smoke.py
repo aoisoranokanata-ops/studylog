@@ -27,7 +27,7 @@ def qapp():
 
 def test_modules_are_discovered():
     modules = {module.id for module in discover()}
-    assert {"timer", "records", "masters", "transfer", "unclassified", "settings"} <= modules
+    assert {"dashboard", "timer", "records", "stats", "goals", "masters", "transfer", "unclassified", "settings"} <= modules
 
 
 def test_main_window_opens_every_module(qapp, ctx, sample_masters):
@@ -233,4 +233,116 @@ def test_main_window_starts_watcher(qapp, ctx):
         assert not window.watcher.poll.isActive()
     finally:
         window.deleteLater()
+        qapp.processEvents()
+
+
+# --- フェーズ3（可視化） ----------------------------------------------------
+
+def _seed_week(ctx, sample_masters):
+    from datetime import timedelta
+
+    today = ctx.stats.today()
+    for offset, minutes in ((0, 90), (1, 60), (3, 45)):
+        day = today - timedelta(days=offset)
+        started = local(day.year, day.month, day.day, 9)
+        ctx.sessions.create(
+            started_at=started,
+            ended_at=started + timedelta(minutes=minutes),
+            active_seconds=minutes * 60,
+            exam_id=sample_masters["exam_id"],
+            material_id=sample_masters["material_id"],
+            subject_id=sample_masters["subject_id"],
+            correct=8,
+            attempted=10,
+        )
+    return today
+
+
+def test_dashboard_shows_today_and_week(qapp, ctx, sample_masters):
+    from studylog.ui.modules.dashboard.view import DashboardView
+
+    today = _seed_week(ctx, sample_masters)
+    ctx.goals.set_week_goal(today, 10 * 3600)
+    ctx.masters.set_exam_date(sample_masters["exam_id"], "2026-11-08")
+    view = DashboardView(ctx)
+    try:
+        assert view.tile_today.value.text() == "1:30"
+        assert "目標" in view.tile_week.note.text()
+        assert view.tile_streak.value.text() == "2日"
+        assert view.exams_body.count() == 1
+    finally:
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_dashboard_button_opens_unclassified(qapp, ctx):
+    from studylog.ui.main_window import MainWindow
+
+    window = MainWindow(ctx)
+    try:
+        assert window.modules[window.nav.currentRow()].id == "dashboard"
+        ctx.open_module("unclassified")
+        assert window.modules[window.nav.currentRow()].id == "unclassified"
+    finally:
+        window.close()
+        window.deleteLater()
+        qapp.processEvents()
+
+
+def test_main_window_opens_timer_first_when_measuring(qapp, ctx, sample_masters):
+    from studylog.ui.main_window import MainWindow
+
+    ctx.timer.start(exam_id=sample_masters["exam_id"])
+    window = MainWindow(ctx)
+    try:
+        assert window.modules[window.nav.currentRow()].id == "timer"
+    finally:
+        ctx.timer.discard()
+        window.close()
+        window.deleteLater()
+        qapp.processEvents()
+
+
+def test_stats_view_all_units(qapp, ctx, sample_masters):
+    from studylog.ui.modules.stats.view import StatsView
+
+    _seed_week(ctx, sample_masters)
+    view = StatsView(ctx)
+    try:
+        assert view.tile_total.value.text() == "3:15"
+        assert view.series_table.rowCount() == 30
+        for index in range(view.unit.count()):
+            view.unit.setCurrentIndex(index)
+            qapp.processEvents()
+            assert view.series_table.rowCount() > 0
+        assert view.breakdowns["exam"].grid.count() > 0
+        assert view.accuracy.grid.count() >= 4  # 1行＝名前・棒・値・補足
+    finally:
+        view.deleteLater()
+        qapp.processEvents()
+
+
+def test_goals_view_saves_week_goal(qapp, ctx, sample_masters, monkeypatch):
+    from studylog.ui.modules.goals import view as goals_view
+
+    monkeypatch.setattr(goals_view, "show_info", lambda *a, **k: None)
+    view = goals_view.GoalsView(ctx)
+    try:
+        view.total_goal.setValue(12)
+        view._exam_week_spins[sample_masters["exam_id"]].setValue(5)
+        view._save_week()
+        week_start = ctx.goals.week_start(ctx.goals.today())
+        assert ctx.goals.week_goal(week_start).seconds == 12 * 3600
+        assert ctx.goals.week_goal(week_start, sample_masters["exam_id"]).seconds == 5 * 3600
+
+        view._exam_spins[sample_masters["exam_id"]].setValue(300)
+        view._save_exam_goals()
+        assert ctx.masters.exams.get(sample_masters["exam_id"]).goal_total_seconds == 300 * 3600
+
+        # 0 にして保存すると、その週の設定は消えて前の週を引き継ぐ
+        view.total_goal.setValue(0)
+        view._save_week()
+        assert ctx.goals.goals.exact(week_start) is None
+    finally:
+        view.deleteLater()
         qapp.processEvents()

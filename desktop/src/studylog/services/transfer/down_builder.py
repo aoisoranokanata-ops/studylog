@@ -31,6 +31,7 @@ class DownBuilder:
         mistakes: MistakeRepository,
         sessions: SessionRepository,
         imported: ImportedPackageRepository,
+        goals=None,
     ) -> None:
         self.settings = settings
         self.masters = masters
@@ -38,6 +39,7 @@ class DownBuilder:
         self.mistakes = mistakes
         self.sessions = sessions
         self.imported = imported
+        self.goals = goals  # GoalService（週目標の引き継ぎに使う）
 
     # --- 部品 ---------------------------------------------------------------
 
@@ -136,11 +138,7 @@ class DownBuilder:
         total = self.sessions.total_seconds(
             SessionFilter(date_from=week_start, date_to=week_end)
         )
-        goal_row = self.sessions.conn.execute(
-            "SELECT goal_seconds FROM weekly_goals "
-            "WHERE week_start = ? AND exam_id IS NULL AND deleted_at IS NULL",
-            (week_start.isoformat(),),
-        ).fetchone()
+        goal_seconds = self.goals.week_goal(week_start).seconds if self.goals else 0
 
         countdowns = []
         for exam in self.masters.list_exams():
@@ -158,7 +156,7 @@ class DownBuilder:
         return {
             "weekStart": week_start.isoformat(),
             "weekTotalSeconds": total,
-            "weekGoalSeconds": int(goal_row["goal_seconds"]) if goal_row else 0,
+            "weekGoalSeconds": goal_seconds,
             "countdowns": countdowns,
         }
 

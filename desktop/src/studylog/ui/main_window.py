@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ctx = ctx
         self.setWindowTitle(f"{config.APP_NAME} {config.APP_VERSION}")
-        self.resize(1000, 700)
+        self.resize(1180, 800)
 
         self.modules: list[FeatureModule] = discover()
         self._views: dict[str, QWidget] = {}
@@ -69,8 +69,12 @@ class MainWindow(QMainWindow):
         self.watcher.start()
 
         self._build_menu()
+        # 画面から別の画面を開けるようにする（ダッシュボードのボタンなど）
+        ctx.navigate = self.open_module
         if self.modules:
-            self.nav.setCurrentRow(0)
+            # 計測中なら計測画面から、そうでなければ先頭（ダッシュボード）から開く
+            start = "timer" if ctx.timer.current() is not None else self.modules[0].id
+            self.open_module(start)
         else:
             self.stack.addWidget(QLabel("表示できる画面がありません"))
         self._update_status()
@@ -97,6 +101,13 @@ class MainWindow(QMainWindow):
             except Exception:
                 log.exception("画面の更新に失敗した: %s", module.id)
         self._update_status()
+
+    def open_module(self, module_id: str) -> None:
+        for row, module in enumerate(self.modules):
+            if module.id == module_id:
+                self.nav.setCurrentRow(row)
+                return
+        log.warning("モジュールが見つからない: %s", module_id)
 
     def _build_menu(self) -> None:
         file_menu = self.menuBar().addMenu("ファイル")
